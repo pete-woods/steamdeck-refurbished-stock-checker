@@ -8,21 +8,23 @@ import (
 	"github.com/0xAX/notificator"
 )
 
-const (
-	pageURL        = "https://store.steampowered.com/sale/steamdeckrefurbished/"
-	checkFrequency = 15 * time.Minute
-)
-
 type Checker struct {
 	notify *notificator.Notificator
+	cfg    CheckerConfig
 }
 
-func NewChecker() *Checker {
+type CheckerConfig struct {
+	URL       string
+	Frequency time.Duration
+}
+
+func NewChecker(cfg CheckerConfig) *Checker {
 	notify := notificator.New(notificator.Options{
 		AppName: "Steam Deck Checker",
 	})
 
 	return &Checker{
+		cfg:    cfg,
 		notify: notify,
 	}
 }
@@ -33,7 +35,7 @@ func (c *Checker) Run(ctx context.Context) error {
 		return err
 	}
 
-	t := time.NewTicker(checkFrequency)
+	t := time.NewTicker(c.cfg.Frequency)
 	done := ctx.Done()
 	for {
 		select {
@@ -52,7 +54,7 @@ func (c *Checker) Run(ctx context.Context) error {
 func (c *Checker) check() (err error) {
 	slog.Debug("Checking steam deck...")
 
-	page, cleanup, err := startPlaywright(pageURL)
+	page, cleanup, err := startPlaywright(c.cfg.URL)
 	defer closer(cleanup, &err)
 	if err != nil {
 		return err
