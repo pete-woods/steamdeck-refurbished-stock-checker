@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync/atomic"
 	"testing"
 
@@ -12,6 +13,15 @@ import (
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 )
+
+func TestMain(m *testing.M) {
+	err := installPlaywright()
+	if err != nil {
+		slog.Error("failed to install playwright", slog.Any("error", err))
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 func TestChecker_check(t *testing.T) {
 	tests := []struct {
