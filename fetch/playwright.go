@@ -8,7 +8,6 @@ var (
 	runOptions = &playwright.RunOptions{
 		Browsers: []string{"chromium-headless-shell"},
 	}
-	expect = playwright.NewPlaywrightAssertions()
 )
 
 func installPlaywright() error {

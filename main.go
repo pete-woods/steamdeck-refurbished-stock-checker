@@ -15,14 +15,13 @@ import (
 func main() {
 	err := run()
 	if err != nil {
-		slog.Error("Error fetching store:", err)
+		slog.Error("Error fetching store:", slog.Any("error", err))
 		return
 	}
 }
 
 func run() error {
 	cfg := fetch.CheckerConfig{}
-
 	flag.StringVar(&cfg.URL, "url", "https://store.steampowered.com/sale/steamdeckrefurbished/", "URL to check")
 	flag.DurationVar(&cfg.Frequency, "frequency", 15*time.Minute, "time between checks")
 	flag.Parse()

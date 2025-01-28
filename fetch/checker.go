@@ -6,26 +6,36 @@ import (
 	"time"
 
 	"github.com/0xAX/notificator"
+	"github.com/playwright-community/playwright-go"
 )
 
 type Checker struct {
-	notify *notificator.Notificator
-	cfg    CheckerConfig
+	cfg CheckerConfig
+}
+
+type notifier interface {
+	Push(title string, text string, iconPath string, urgency string) error
 }
 
 type CheckerConfig struct {
 	URL       string
 	Frequency time.Duration
+
+	notifier notifier
+	expect   playwright.PlaywrightAssertions
 }
 
 func NewChecker(cfg CheckerConfig) *Checker {
-	notify := notificator.New(notificator.Options{
-		AppName: "Steam Deck Checker",
-	})
-
+	if cfg.expect == nil {
+		cfg.expect = playwright.NewPlaywrightAssertions()
+	}
+	if cfg.notifier == nil {
+		cfg.notifier = notificator.New(notificator.Options{
+			AppName: "Steam Deck Checker",
+		})
+	}
 	return &Checker{
-		cfg:    cfg,
-		notify: notify,
+		cfg: cfg,
 	}
 }
 
@@ -61,12 +71,12 @@ func (c *Checker) check() (err error) {
 	}
 
 	addToCart := page.GetByText("add to cart").First()
-	err = expect.Locator(addToCart).ToBeVisible()
+	err = c.cfg.expect.Locator(addToCart).ToBeVisible()
 	if err != nil {
 		slog.Debug("No stock found")
 		return nil
 	}
 
 	slog.Info("Stock available")
-	return c.notify.Push("Stock status", "Stock is available", "", notificator.UR_CRITICAL)
+	return c.cfg.notifier.Push("Stock status", "Stock is available", "", notificator.UR_CRITICAL)
 }
