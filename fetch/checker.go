@@ -28,10 +28,16 @@ func NewChecker() *Checker {
 }
 
 func (c *Checker) Run(ctx context.Context) error {
+	err := installPlaywright()
+	if err != nil {
+		return err
+	}
+
 	t := time.NewTicker(checkFrequency)
+	done := ctx.Done()
 	for {
 		select {
-		case <-ctx.Done():
+		case <-done:
 			slog.Info("Checker stopped")
 			return nil
 		case <-t.C:

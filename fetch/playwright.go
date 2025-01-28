@@ -11,13 +11,12 @@ var (
 	expect = playwright.NewPlaywrightAssertions()
 )
 
+func installPlaywright() error {
+	return playwright.Install(runOptions)
+}
+
 func startPlaywright(rawurl string) (playwright.Page, func() error, error) {
 	var cleanups cleaner
-
-	err := playwright.Install(runOptions)
-	if err != nil {
-		return nil, cleanups.Cleanup, err
-	}
 
 	pw, err := playwright.Run(runOptions)
 	if err != nil {
