@@ -1,13 +1,15 @@
 package fetch
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"sync/atomic"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/playwright-community/playwright-go"
 	"gotest.tools/v3/assert"
@@ -25,42 +27,64 @@ func TestMain(m *testing.M) {
 
 func TestChecker_check(t *testing.T) {
 	tests := []struct {
-		name          string
-		input         string
-		expectedStock bool
+		name        string
+		input       string
+		expectTitle string
+		expectText  string
 	}{
 		{
-			name:          "available",
-			input:         "testdata/available",
-			expectedStock: true,
+			name:        "available",
+			input:       "testdata/available",
+			expectTitle: "Stock status",
+			expectText:  "Stock is available",
 		},
 		{
-			name:          "unavailable",
-			input:         "testdata/unavailable",
-			expectedStock: false,
+			name:        "unavailable",
+			input:       "testdata/unavailable",
+			expectTitle: "",
+			expectText:  "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
 			fs := http.FileServer(http.Dir(tt.input))
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				slog.Info(fmt.Sprintf("%s %s", r.Method, r.URL.Path))
 				fs.ServeHTTP(w, r)
 			}))
 
-			var notified atomic.Bool
+			var mu sync.Mutex
+			gotTitle := ""
+			gotText := ""
+
 			c := NewChecker(CheckerConfig{
-				URL: srv.URL,
+				URL:       srv.URL,
+				Frequency: 5 * time.Millisecond,
 				notifier: notifierFunc(func(title string, text string, iconPath string, urgency string) error {
-					notified.Store(true)
+					mu.Lock()
+					defer mu.Unlock()
+					gotTitle = title
+					gotText = text
+
+					cancel()
 					return nil
 				}),
 				expect: playwright.NewPlaywrightAssertions(500),
 			})
 
-			err := c.check()
+			err := c.Run(ctx)
 			assert.Assert(t, err)
-			assert.Check(t, cmp.Equal(tt.expectedStock, notified.Load()))
+
+			t.Run("Checker", func(t *testing.T) {
+				mu.Lock()
+				defer mu.Unlock()
+
+				assert.Check(t, cmp.Equal(tt.expectTitle, gotTitle))
+				assert.Check(t, cmp.Equal(tt.expectText, gotText))
+			})
 		})
 	}
 }

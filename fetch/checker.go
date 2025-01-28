@@ -21,6 +21,7 @@ type CheckerConfig struct {
 	URL       string
 	Frequency time.Duration
 
+	// used in tests
 	notifier notifier
 	expect   playwright.PlaywrightAssertions
 }
