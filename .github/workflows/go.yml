@@ -24,5 +24,14 @@ jobs:
     - name: Build
       run: go build -v ./...
 
+    - name: Cache Playwright driver
+      id: cache-playwright
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
     - name: Test
       run: go test -v ./...
